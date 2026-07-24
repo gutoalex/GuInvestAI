@@ -13,8 +13,16 @@ function initGemini() {
   return model
 }
 
+let lastApiKey = ''
+
 function getModel() {
-  if (!model) initGemini()
+  const settings = getSettings()
+  // Reinicializa se a key mudou
+  if (!model || settings.geminiApiKey !== lastApiKey) {
+    lastApiKey = settings.geminiApiKey
+    model = null
+    initGemini()
+  }
   return model
 }
 
