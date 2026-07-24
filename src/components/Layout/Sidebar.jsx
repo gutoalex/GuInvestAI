@@ -58,21 +58,21 @@ export default function Sidebar() {
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-dark-card border-t border-gray-100 dark:border-dark-border z-40 safe-area-bottom">
-        <div className="flex justify-around items-center py-2">
-          {navItems.slice(0, 5).map(item => (
+        <div className="flex overflow-x-auto gap-1 px-2 py-2 scrollbar-hide">
+          {navItems.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 p-2 rounded-lg text-xs transition-all ${
+                `flex flex-col items-center gap-0.5 min-w-[60px] p-2 rounded-lg text-xs transition-all flex-shrink-0 ${
                   isActive
-                    ? 'text-primary-600 dark:text-primary-400'
+                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
                     : 'text-gray-500 dark:text-gray-400'
                 }`
               }
             >
               <item.icon size={20} />
-              <span className="text-[10px]">{item.label}</span>
+              <span className="text-[10px] whitespace-nowrap">{item.label}</span>
             </NavLink>
           ))}
         </div>
