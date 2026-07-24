@@ -1,18 +1,80 @@
 import { useState, useEffect } from 'react'
-import { Save, Download, Upload, Moon, Sun, Key, Trash2 } from 'lucide-react'
-import { getSettings, saveSettings, getProfile, saveProfile, exportData, importData } from '../services/dataService'
+import { Save, Download, Upload, Moon, Sun, Key, Trash2, Cloud, RefreshCw, Loader2 } from 'lucide-react'
+import { getSettings, saveSettings, getProfile, saveProfile, exportData, importData, getAssets, getTransactions, getDividends, getGoals } from '../services/dataService'
+import { syncAllToSheets, fetchAllFromSheets, setupSheets, isSheetsConfigured } from '../services/sheetsService'
 
 export default function Settings() {
   const [settings, setSettingsState] = useState(getSettings())
   const [profile, setProfileState] = useState(getProfile())
   const [saved, setSaved] = useState(false)
   const [importStatus, setImportStatus] = useState(null)
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState(null)
 
   const handleSaveSettings = () => {
     saveSettings(settings)
     saveProfile(profile)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleSyncToSheets = async () => {
+    setSyncing(true)
+    setSyncStatus(null)
+    try {
+      const data = {
+        assets: getAssets(),
+        transactions: getTransactions(),
+        dividends: getDividends(),
+        profile: getProfile(),
+        goals: getGoals(),
+      }
+      await syncAllToSheets(data)
+      setSyncStatus('success')
+    } catch (err) {
+      setSyncStatus('error: ' + err.message)
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncStatus(null), 4000)
+    }
+  }
+
+  const handleSyncFromSheets = async () => {
+    setSyncing(true)
+    setSyncStatus(null)
+    try {
+      const data = await fetchAllFromSheets()
+      if (data.error) throw new Error(data.error)
+      // Importa dados da planilha para o localStorage
+      const importStr = JSON.stringify({
+        assets: data.assets || [],
+        transactions: data.transactions || [],
+        dividends: data.dividends || [],
+        profile: data.profile || {},
+        goals: data.goals || [],
+      })
+      importData(importStr)
+      setProfileState(getProfile())
+      setSyncStatus('success')
+    } catch (err) {
+      setSyncStatus('error: ' + err.message)
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncStatus(null), 4000)
+    }
+  }
+
+  const handleSetupSheets = async () => {
+    setSyncing(true)
+    try {
+      await setupSheets()
+      setSyncStatus('setup-ok')
+    } catch (err) {
+      setSyncStatus('error: ' + err.message)
+    } finally {
+      setSyncing(false)
+      setTimeout(() => setSyncStatus(null), 4000)
+    }
   }
 
   const handleExport = () => {
@@ -83,6 +145,42 @@ export default function Settings() {
           value={settings.geminiApiKey}
           onChange={e => setSettingsState({ ...settings, geminiApiKey: e.target.value })}
         />
+      </div>
+
+      {/* Google Sheets */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+          <Cloud size={18} /> Google Sheets (Banco de Dados)
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          Cole aqui a URL do Apps Script publicado para sincronizar dados com o Google Sheets.
+        </p>
+        <input
+          type="text"
+          placeholder="https://script.google.com/macros/s/.../exec"
+          className="input-field mb-3"
+          value={settings.sheetsUrl || ''}
+          onChange={e => setSettingsState({ ...settings, sheetsUrl: e.target.value })}
+        />
+        {settings.sheetsUrl && (
+          <div className="flex flex-wrap gap-2">
+            <button onClick={handleSetupSheets} disabled={syncing} className="btn-secondary text-sm flex items-center gap-1">
+              {syncing ? <Loader2 size={14} className="animate-spin" /> : <Cloud size={14} />}
+              Criar Abas
+            </button>
+            <button onClick={handleSyncToSheets} disabled={syncing} className="btn-primary text-sm flex items-center gap-1">
+              {syncing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              Enviar para Planilha
+            </button>
+            <button onClick={handleSyncFromSheets} disabled={syncing} className="btn-secondary text-sm flex items-center gap-1">
+              {syncing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              Baixar da Planilha
+            </button>
+          </div>
+        )}
+        {syncStatus === 'success' && <p className="text-green-600 text-sm mt-2">✓ Sincronizado com sucesso!</p>}
+        {syncStatus === 'setup-ok' && <p className="text-green-600 text-sm mt-2">✓ Abas criadas na planilha!</p>}
+        {syncStatus?.startsWith('error') && <p className="text-red-600 text-sm mt-2">✗ {syncStatus}</p>}
       </div>
 
       {/* Perfil do Investidor */}
