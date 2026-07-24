@@ -9,7 +9,7 @@ function initGemini() {
   if (!settings.geminiApiKey) return null
 
   genAI = new GoogleGenerativeAI(settings.geminiApiKey)
-  model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
   return model
 }
 
