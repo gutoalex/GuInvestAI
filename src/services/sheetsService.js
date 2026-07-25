@@ -103,6 +103,22 @@ export async function setupSheets() {
   return fetchGet('setup')
 }
 
+// =============================================
+// INSIGHTS
+// =============================================
+
+export async function fetchInsightsFromSheets() {
+  return fetchGet('getInsights')
+}
+
+export async function addInsightToSheets(insight) {
+  return fetchPost('addInsight', insight)
+}
+
+export async function addInsightsToSheets(insights) {
+  return fetchPost('addInsights', insights)
+}
+
 // Verifica se a integração está configurada
 export function isSheetsConfigured() {
   const settings = getSettings()

@@ -9,6 +9,7 @@ import {
   BarChart3,
   Target,
   Calculator,
+  Lightbulb,
   Settings,
 } from 'lucide-react'
 
@@ -22,6 +23,7 @@ const navItems = [
   { to: '/comparador', icon: BarChart3, label: 'Comparador' },
   { to: '/metas', icon: Target, label: 'Metas' },
   { to: '/simulador', icon: Calculator, label: 'Simulador' },
+  { to: '/insights', icon: Lightbulb, label: 'Insights' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ]
 

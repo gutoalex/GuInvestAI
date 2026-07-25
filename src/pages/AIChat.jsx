@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'
-import { chatWithGemini, isConfigured } from '../services/geminiService'
+import { chatWithGemini, extractInsights, isConfigured } from '../services/geminiService'
 import { getAssets, getPortfolioSummary, getTotalDividends, getProfile } from '../services/dataService'
+import { addInsightsToSheets, isSheetsConfigured } from '../services/sheetsService'
 import { formatCurrency } from '../utils/helpers'
 import { Link } from 'react-router-dom'
 
@@ -45,6 +46,19 @@ export default function AIChat() {
     return ctx
   }
 
+  // Mensagens que devem disparar salvamento de insights
+  const insightTriggers = [
+    'analisar minha carteira',
+    'mostrar riscos',
+    'melhor diversificação',
+    'onde investir',
+  ]
+
+  function shouldSaveInsights(message) {
+    const lower = message.toLowerCase()
+    return insightTriggers.some(trigger => lower.includes(trigger))
+  }
+
   async function handleSend(text = null) {
     const message = text || input.trim()
     if (!message) return
@@ -57,6 +71,25 @@ export default function AIChat() {
       const context = getPortfolioContext()
       const response = await chatWithGemini(message, context)
       setMessages(prev => [...prev, { role: 'assistant', content: response }])
+
+      // Auto-save insights se for uma análise relevante
+      if (shouldSaveInsights(message) && isSheetsConfigured()) {
+        try {
+          const insights = await extractInsights(response)
+          if (insights && insights.length > 0) {
+            const today = new Date().toISOString().split('T')[0]
+            const insightsWithDate = insights.map(i => ({ ...i, data: today }))
+            await addInsightsToSheets(insightsWithDate)
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: `💡 ${insights.length} insights salvos automaticamente! Veja na página de Insights.`
+            }])
+          }
+        } catch (insightErr) {
+          // Falha silenciosa - não impede o fluxo principal
+          console.warn('Falha ao salvar insights:', insightErr)
+        }
+      }
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: `❌ Erro: ${error.message}` }])
     } finally {

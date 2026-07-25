@@ -9,6 +9,7 @@ import ImageAnalysis from './pages/ImageAnalysis'
 import Comparator from './pages/Comparator'
 import Goals from './pages/Goals'
 import Simulator from './pages/Simulator'
+import Insights from './pages/Insights'
 import Settings from './pages/Settings'
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="/comparador" element={<Comparator />} />
         <Route path="/metas" element={<Goals />} />
         <Route path="/simulador" element={<Simulator />} />
+        <Route path="/insights" element={<Insights />} />
         <Route path="/configuracoes" element={<Settings />} />
       </Routes>
     </Layout>

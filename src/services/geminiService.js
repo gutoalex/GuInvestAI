@@ -133,6 +133,40 @@ Responda em português do Brasil.`
   return response.text
 }
 
+// Extrai insights estruturados de uma resposta de análise
+export async function extractInsights(analysisText) {
+  const ai = getClient()
+  if (!ai) return []
+
+  const prompt = `Analise o texto abaixo (que é uma análise de carteira de investimentos) e extraia os pontos-chave como um array JSON.
+
+Cada insight deve ter:
+- "tipo": um de ["alocacao", "alerta", "sugestao", "ponto_forte", "resumo"]
+- "conteudo": texto curto e direto (máximo 150 caracteres)
+- "categoria": opcional, ex: "diversificacao", "risco", "dividendos", "aporte"
+
+Retorne APENAS o array JSON, sem texto adicional. Extraia entre 3 e 8 insights.
+
+Texto da análise:
+${analysisText}`
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+    })
+
+    const text = response.text
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+    return JSON.parse(text)
+  } catch {
+    return []
+  }
+}
+
 export function isConfigured() {
   const settings = getSettings()
   return !!settings.geminiApiKey
