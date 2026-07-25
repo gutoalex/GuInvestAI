@@ -15,7 +15,7 @@ function getClient() {
   return client
 }
 
-const MODEL = 'gemini-2.5-flash'
+const MODEL = 'gemini-3.5-flash'
 
 // Chat livre com Gemini
 export async function chatWithGemini(message, context = '') {
