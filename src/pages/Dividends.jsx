@@ -1,11 +1,41 @@
 import { useState, useEffect } from 'react'
-import { Plus, DollarSign, X } from 'lucide-react'
+import { Plus, DollarSign, X, TrendingUp } from 'lucide-react'
 import { Bar } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js'
 import { getDividends, addDividend, getTotalDividends, getMonthlyDividends, getAssets } from '../services/dataService'
 import { formatCurrency } from '../utils/helpers'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+
+// Calcula previsão de dividendos por ativo baseado no histórico
+function calcPrediction(dividends, assets) {
+  const predictions = []
+
+  assets.forEach(asset => {
+    const assetDivs = dividends.filter(d => d.ticker === asset.ticker)
+    if (assetDivs.length === 0) return
+
+    // Pega os últimos 3 pagamentos desse ativo para fazer a média
+    const sorted = [...assetDivs].sort((a, b) => new Date(b.data) - new Date(a.data))
+    const recent = sorted.slice(0, 3)
+    const avgPerPayment = recent.reduce((s, d) => s + (d.valor || 0), 0) / recent.length
+
+    predictions.push({
+      ticker: asset.ticker,
+      previsao: avgPerPayment,
+      baseadoEm: recent.length,
+    })
+  })
+
+  return predictions
+}
+
+function getNextMonthLabel() {
+  const now = new Date()
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+  const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return `${monthNames[next.getMonth()]}/${next.getFullYear()}`
+}
 
 export default function Dividends() {
   const [dividends, setDividends] = useState([])
@@ -42,6 +72,11 @@ export default function Dividends() {
 
   const monthly = getMonthlyDividends()
   const months = Object.keys(monthly).sort().slice(-12)
+
+  // Previsão
+  const predictions = calcPrediction(dividends, assets)
+  const totalPrediction = predictions.reduce((s, p) => s + p.previsao, 0)
+  const nextMonth = getNextMonthLabel()
 
   const chartData = {
     labels: months.map(m => {
@@ -81,7 +116,7 @@ export default function Dividends() {
       </div>
 
       {/* Cards Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="card">
           <p className="text-sm text-gray-500 dark:text-gray-400">Total Recebido</p>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(total)}</p>
@@ -94,7 +129,45 @@ export default function Dividends() {
           <p className="text-sm text-gray-500 dark:text-gray-400">Ativos Pagando</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-white">{Object.keys(divByAsset).length}</p>
         </div>
+        <div className="card border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-900/10">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-500 dark:text-gray-400">Previsão {nextMonth}</p>
+            <TrendingUp size={16} className="text-green-500" />
+          </div>
+          <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPrediction)}</p>
+          <p className="text-xs text-gray-400 mt-1">baseado no histórico</p>
+        </div>
       </div>
+
+      {/* Previsão Detalhada */}
+      {predictions.length > 0 && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            Previsão de Proventos — {nextMonth}
+          </h2>
+          <div className="space-y-2">
+            {predictions
+              .sort((a, b) => b.previsao - a.previsao)
+              .map(p => (
+                <div key={p.ticker} className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-dark-border last:border-0">
+                  <div className="flex items-center gap-2">
+                    <DollarSign size={14} className="text-green-500" />
+                    <span className="font-medium text-gray-900 dark:text-white text-sm">{p.ticker}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-medium text-green-600 text-sm">~{formatCurrency(p.previsao)}</span>
+                    <span className="text-xs text-gray-400 ml-2">(média de {p.baseadoEm} pag.)</span>
+                  </div>
+                </div>
+              ))
+            }
+            <div className="flex items-center justify-between pt-3 border-t-2 border-gray-200 dark:border-dark-border">
+              <span className="font-semibold text-gray-900 dark:text-white">Total Previsto</span>
+              <span className="font-bold text-green-600 text-lg">{formatCurrency(totalPrediction)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
