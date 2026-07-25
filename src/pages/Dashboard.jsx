@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { TrendingUp, DollarSign, Briefcase, PieChart, ArrowUpRight, ArrowDownRight, Lightbulb } from 'lucide-react'
-import { Doughnut } from 'react-chartjs-2'
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
+import { Doughnut, Bar } from 'react-chartjs-2'
+import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
 import { getAssets, getPortfolioSummary, getTotalDividends, getMonthlyDividends } from '../services/dataService'
 import { fetchInsightsFromSheets, isSheetsConfigured } from '../services/sheetsService'
 import { formatCurrency, formatPercent, getColor } from '../utils/helpers'
 
-ChartJS.register(ArcElement, Tooltip, Legend)
+ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
 // Mapeamento de FIIs conhecidos por segmento
 const FII_SEGMENTS = {
@@ -325,6 +325,41 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Gráfico Dividendos Mensais */}
+      {months.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Dividendos Mensais</h2>
+            <Link to="/dividendos" className="text-sm text-primary-600 hover:underline">Ver detalhes</Link>
+          </div>
+          <div className="h-48">
+            <Bar
+              data={{
+                labels: months.map(m => {
+                  const [year, month] = m.split('-')
+                  return `${month}/${year.slice(2)}`
+                }),
+                datasets: [{
+                  label: 'R$',
+                  data: months.map(m => monthlyDiv[m]),
+                  backgroundColor: '#4c6ef5',
+                  borderRadius: 6,
+                }]
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                  x: { grid: { display: false } }
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="card">
