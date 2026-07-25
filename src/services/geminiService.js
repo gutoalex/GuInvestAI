@@ -3,7 +3,7 @@ import { getSettings } from './dataService'
 
 let genAI = null
 let model = null
-
+//atualizar
 function initGemini() {
   const settings = getSettings()
   if (!settings.geminiApiKey) return null
