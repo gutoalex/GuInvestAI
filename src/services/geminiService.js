@@ -1,36 +1,26 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from '@google/genai'
 import { getSettings } from './dataService'
 
-let genAI = null
-let model = null
-//atualizar
-function initGemini() {
+let client = null
+let lastApiKey = ''
+
+function getClient() {
   const settings = getSettings()
   if (!settings.geminiApiKey) return null
 
-  genAI = new GoogleGenerativeAI(settings.geminiApiKey)
-  model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
-
-  return model
-}
-
-let lastApiKey = ''
-
-function getModel() {
-  const settings = getSettings()
-  // Reinicializa se a key mudou
-  if (!model || settings.geminiApiKey !== lastApiKey) {
+  if (!client || settings.geminiApiKey !== lastApiKey) {
     lastApiKey = settings.geminiApiKey
-    model = null
-    initGemini()
+    client = new GoogleGenAI({ apiKey: settings.geminiApiKey })
   }
-  return model
+  return client
 }
+
+const MODEL = 'gemini-2.5-flash'
 
 // Chat livre com Gemini
 export async function chatWithGemini(message, context = '') {
-  const m = getModel()
-  if (!m) throw new Error('Configure sua API Key do Gemini nas Configurações.')
+  const ai = getClient()
+  if (!ai) throw new Error('Configure sua API Key do Gemini nas Configurações.')
 
   const systemPrompt = `Você é o GuInvestAI, um assistente financeiro pessoal especializado em investimentos brasileiros (FIIs, Ações, ETFs, Tesouro Direto).
 Responda sempre em português do Brasil.
@@ -38,18 +28,21 @@ Seja claro, direto e educativo. Quando possível, use dados e indicadores.
 Sempre lembre que suas sugestões são informativas e que a decisão final é do usuário.
 ${context ? `\nContexto da carteira do usuário:\n${context}` : ''}`
 
-  const result = await m.generateContent([
-    { text: systemPrompt },
-    { text: message }
-  ])
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: message,
+    config: {
+      systemInstruction: systemPrompt,
+    },
+  })
 
-  return result.response.text()
+  return response.text
 }
 
 // Análise de ativo específico
 export async function analyzeAsset(asset, marketData = {}) {
-  const m = getModel()
-  if (!m) throw new Error('Configure sua API Key do Gemini nas Configurações.')
+  const ai = getClient()
+  if (!ai) throw new Error('Configure sua API Key do Gemini nas Configurações.')
 
   const prompt = `Analise o ativo ${asset.ticker} com base nas seguintes informações da minha carteira:
 - Preço Médio: R$ ${asset.precoMedio?.toFixed(2)}
@@ -66,14 +59,18 @@ Considere o cenário atual do mercado brasileiro. Forneça:
 
 Responda em português do Brasil de forma clara e educativa.`
 
-  const result = await m.generateContent(prompt)
-  return result.response.text()
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+  })
+
+  return response.text
 }
 
 // Análise de imagem (Gemini Vision)
 export async function analyzeImage(imageBase64, mimeType = 'image/png') {
-  const m = getModel()
-  if (!m) throw new Error('Configure sua API Key do Gemini nas Configurações.')
+  const ai = getClient()
+  if (!ai) throw new Error('Configure sua API Key do Gemini nas Configurações.')
 
   const prompt = `Extraia as seguintes informações da imagem fornecida, que representa um extrato de investimentos ou um print de tela de corretora:
 - Nome do Ativo (Ticker)
@@ -87,18 +84,21 @@ Formate a saída como um JSON válido, por exemplo:
 
 Se não conseguir identificar algum campo, use null. Retorne APENAS o JSON, sem texto adicional.`
 
-  const result = await m.generateContent([
-    { text: prompt },
-    {
-      inlineData: {
-        data: imageBase64,
-        mimeType
-      }
-    }
-  ])
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      { text: prompt },
+      {
+        inlineData: {
+          data: imageBase64,
+          mimeType,
+        },
+      },
+    ],
+  })
 
-  const text = result.response.text()
-  
+  const text = response.text
+
   // Tenta extrair JSON da resposta
   try {
     const jsonMatch = text.match(/\[[\s\S]*\]/)
@@ -113,8 +113,8 @@ Se não conseguir identificar algum campo, use null. Retorne APENAS o JSON, sem 
 
 // Sugestões de investimento
 export async function getSuggestion(portfolio, amount, profile) {
-  const m = getModel()
-  if (!m) throw new Error('Configure sua API Key do Gemini nas Configurações.')
+  const ai = getClient()
+  if (!ai) throw new Error('Configure sua API Key do Gemini nas Configurações.')
 
   const prompt = `Tenho R$ ${amount} para investir. Com base na minha carteira atual:
 ${portfolio.map(a => `- ${a.ticker} (${a.tipo}): ${a.quantidade} cotas, PM: R$${a.precoMedio?.toFixed(2)}`).join('\n')}
@@ -125,8 +125,12 @@ Quais seriam as melhores opções de investimento para diversificar ou otimizar 
 Apresente 2-3 sugestões com justificativa breve.
 Responda em português do Brasil.`
 
-  const result = await m.generateContent(prompt)
-  return result.response.text()
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: prompt,
+  })
+
+  return response.text
 }
 
 export function isConfigured() {
