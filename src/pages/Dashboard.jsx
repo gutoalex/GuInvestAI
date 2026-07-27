@@ -7,7 +7,7 @@ import { getAssets, getPortfolioSummary, getTotalDividends, getMonthlyDividends 
 import { fetchInsightsFromSheets, isSheetsConfigured } from '../services/sheetsService'
 import { updatePortfolioPrices, isMarketConfigured } from '../services/marketService'
 import { formatCurrency, formatPercent, getColor } from '../utils/helpers'
-import { FII_RECOMMENDATIONS, calcMonthlyIncome, calcQuotasForBudget } from '../data/fiiRecommendations'
+import { FII_RECOMMENDATIONS, RECOMMENDATIONS, calcMonthlyIncome, calcQuotasForBudget } from '../data/fiiRecommendations'
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -52,6 +52,7 @@ export default function Dashboard() {
   const [assets, setAssets] = useState([])
   const [totalDividends, setTotalDividends] = useState(0)
   const [lastInsights, setLastInsights] = useState([])
+  const [recsFilter, setRecsFilter] = useState('Todos')
 
   useEffect(() => {
     setSummary(getPortfolioSummary())
@@ -353,51 +354,86 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">📡 Radar de Oportunidades</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">FIIs com bom DY para considerar</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Ativos para considerar comprar</p>
           </div>
         </div>
+        {/* Filtros por tipo */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {['Todos', 'FII', 'Ação', 'ETF'].map(tipo => (
+            <button
+              key={tipo}
+              onClick={() => setRecsFilter && setRecsFilter(tipo)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                (recsFilter || 'Todos') === tipo
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-gray-100 dark:bg-dark-border text-gray-600 dark:text-gray-400'
+              }`}
+            >
+              {tipo}
+            </button>
+          ))}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {FII_RECOMMENDATIONS
-            .filter(r => !assets.find(a => a.ticker === r.ticker || a.ticker === r.ticker.replace('11', 'II')))
+          {RECOMMENDATIONS
+            .filter(r => {
+              // Filtra ativos que o usuário já tem
+              const jaTemNaCarteira = assets.find(a =>
+                a.ticker === r.ticker ||
+                a.ticker === r.ticker.replace('11', 'II') ||
+                a.ticker.replace('II', '11') === r.ticker
+              )
+              if (jaTemNaCarteira) return false
+              // Filtra por tipo selecionado
+              if (recsFilter && recsFilter !== 'Todos') return r.tipo === recsFilter
+              return true
+            })
             .sort((a, b) => b.dy - a.dy)
             .slice(0, 6)
-            .map(fii => {
+            .map(rec => {
               const cotas10 = 10
-              const renda10 = calcMonthlyIncome(fii, cotas10)
-              const cotasPra100 = Math.ceil(100 / fii.lastDiv)
+              const renda10 = calcMonthlyIncome(rec, cotas10)
+              const temDiv = rec.lastDiv > 0
               return (
-                <div key={fii.ticker} className="bg-gray-50 dark:bg-dark-bg rounded-xl p-4 border border-gray-100 dark:border-dark-border">
+                <div key={rec.ticker} className="bg-gray-50 dark:bg-dark-bg rounded-xl p-4 border border-gray-100 dark:border-dark-border">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="font-bold text-gray-900 dark:text-white text-sm">{fii.ticker}</span>
+                      <span className="font-bold text-gray-900 dark:text-white text-sm">{rec.ticker}</span>
                       <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                        fii.segmento === 'Papel' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
-                        fii.segmento === 'Tijolo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                        rec.tipo === 'FII' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                        rec.tipo === 'Ação' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
                         'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                       }`}>
-                        {fii.segmento}
+                        {rec.tipo}
                       </span>
+                      {rec.segmento && (
+                        <span className="ml-1 text-xs text-gray-400">{rec.segmento}</span>
+                      )}
                     </div>
-                    <span className="text-green-600 font-bold text-sm">DY {fii.dy}%</span>
+                    {rec.dy > 0 && <span className="text-green-600 font-bold text-sm">DY {rec.dy}%</span>}
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{fii.descricao}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{rec.descricao}</p>
                   <div className="space-y-1 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Cota:</span>
-                      <span className="font-medium dark:text-white">{formatCurrency(fii.preco)}</span>
+                      <span className="font-medium dark:text-white">{formatCurrency(rec.preco)}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Último dividendo:</span>
-                      <span className="font-medium text-green-600">{formatCurrency(fii.lastDiv)}/cota</span>
-                    </div>
-                    <div className="flex justify-between bg-green-50 dark:bg-green-900/20 rounded-lg px-2 py-1 mt-1">
-                      <span className="text-gray-600 dark:text-gray-400">{cotas10} cotas =</span>
-                      <span className="font-bold text-green-600">~{formatCurrency(renda10)}/mês</span>
-                    </div>
-                    <div className="flex justify-between text-gray-400">
-                      <span>Para R$ 100/mês:</span>
-                      <span>{cotasPra100} cotas ({formatCurrency(cotasPra100 * fii.preco)})</span>
-                    </div>
+                    {temDiv && (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Último provento:</span>
+                          <span className="font-medium text-green-600">{formatCurrency(rec.lastDiv)}/cota</span>
+                        </div>
+                        <div className="flex justify-between bg-green-50 dark:bg-green-900/20 rounded-lg px-2 py-1 mt-1">
+                          <span className="text-gray-600 dark:text-gray-400">{cotas10} cotas =</span>
+                          <span className="font-bold text-green-600">~{formatCurrency(renda10)}/mês</span>
+                        </div>
+                      </>
+                    )}
+                    {!temDiv && (
+                      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg px-2 py-1 mt-1 text-center">
+                        <span className="text-purple-600 dark:text-purple-300 text-xs">Foco em valorização</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -405,7 +441,7 @@ export default function Dashboard() {
           }
         </div>
         <p className="text-xs text-gray-400 mt-3 text-center">
-          * Valores aproximados baseados no histórico. Rentabilidade passada não garante futura.
+          * Valores aproximados. Rentabilidade passada não garante futura. Não é recomendação de compra.
         </p>
       </div>
 
