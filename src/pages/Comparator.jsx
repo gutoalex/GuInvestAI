@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BarChart3, Loader2 } from 'lucide-react'
-import { chatWithGemini, isConfigured } from '../services/geminiService'
+import { chatWithAI, isConfigured } from '../services/aiService'
 import { getAssets } from '../services/dataService'
 import { Link } from 'react-router-dom'
 
@@ -27,8 +27,8 @@ Inclua:
 
 Responda de forma clara e organizada em português do Brasil.`
 
-      const response = await chatWithGemini(prompt)
-      setResult(response)
+      const { text } = await chatWithAI(prompt)
+      setResult(text)
     } catch (err) {
       setResult(`❌ Erro: ${err.message}`)
     } finally {

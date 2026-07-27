@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Bot, User, Sparkles, Loader2 } from 'lucide-react'
-import { chatWithGemini, extractInsights, isConfigured } from '../services/geminiService'
+import { chatWithAI, extractInsights, isConfigured, getConfiguredProviders } from '../services/aiService'
 import { getAssets, getPortfolioSummary, getTotalDividends, getProfile } from '../services/dataService'
 import { addInsightsToSheets, isSheetsConfigured } from '../services/sheetsService'
 import { formatCurrency } from '../utils/helpers'
@@ -69,8 +69,8 @@ export default function AIChat() {
 
     try {
       const context = getPortfolioContext()
-      const response = await chatWithGemini(message, context)
-      setMessages(prev => [...prev, { role: 'assistant', content: response }])
+      const { text: response, provider } = await chatWithAI(message, context)
+      setMessages(prev => [...prev, { role: 'assistant', content: response, provider }])
 
       // Auto-save insights se for uma análise relevante
       if (shouldSaveInsights(message) && isSheetsConfigured()) {
@@ -157,6 +157,11 @@ export default function AIChat() {
                 : 'bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border text-gray-800 dark:text-dark-text rounded-bl-md'
             }`}>
               <div className="whitespace-pre-wrap">{msg.content}</div>
+              {msg.provider && (
+                <div className="mt-2 text-[10px] opacity-50">
+                  via {msg.provider}
+                </div>
+              )}
             </div>
             {msg.role === 'user' && (
               <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-dark-border flex items-center justify-center flex-shrink-0">

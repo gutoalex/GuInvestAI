@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Upload, Camera, Check, X, Loader2 } from 'lucide-react'
-import { analyzeImage, isConfigured } from '../services/geminiService'
+import { analyzeImage, isConfigured } from '../services/aiService'
 import { addAsset } from '../services/dataService'
 import { formatCurrency } from '../utils/helpers'
 import { Link } from 'react-router-dom'

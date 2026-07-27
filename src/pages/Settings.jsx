@@ -129,22 +129,67 @@ export default function Settings() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">⚙️ Configurações</h1>
 
-      {/* API Key */}
+      {/* API Keys */}
       <div className="card">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Key size={18} /> API do Gemini
+          <Key size={18} /> Chaves de IA (Fallback automático)
         </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          Insira sua API Key do Google Gemini para habilitar as funcionalidades de IA.
-          Obtenha em: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-primary-600 hover:underline">aistudio.google.com/apikey</a>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Configure uma ou mais IAs. O sistema tenta na ordem: OpenAI → Groq → Gemini. Análise de imagem usa sempre Gemini.
         </p>
-        <input
-          type="password"
-          placeholder="Sua API Key do Gemini"
-          className="input-field"
-          value={settings.geminiApiKey}
-          onChange={e => setSettingsState({ ...settings, geminiApiKey: e.target.value })}
-        />
+
+        <div className="space-y-4">
+          {/* OpenAI */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              OpenAI API Key <span className="text-green-600">(gratuita até limite)</span>
+            </label>
+            <input
+              type="password"
+              placeholder="sk-..."
+              className="input-field"
+              value={settings.openaiApiKey || ''}
+              onChange={e => setSettingsState({ ...settings, openaiApiKey: e.target.value })}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Obtenha em: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" className="text-primary-600 hover:underline">platform.openai.com/api-keys</a>
+            </p>
+          </div>
+
+          {/* Groq */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              Groq API Key <span className="text-green-600">(grátis, sem cartão)</span>
+            </label>
+            <input
+              type="password"
+              placeholder="gsk_..."
+              className="input-field"
+              value={settings.groqApiKey || ''}
+              onChange={e => setSettingsState({ ...settings, groqApiKey: e.target.value })}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Obtenha em: <a href="https://console.groq.com/keys" target="_blank" rel="noopener" className="text-primary-600 hover:underline">console.groq.com/keys</a> — Super rápido e gratuito!
+            </p>
+          </div>
+
+          {/* Gemini */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              Gemini API Key <span className="text-amber-600">(paga — usado como fallback e para imagens)</span>
+            </label>
+            <input
+              type="password"
+              placeholder="Sua API Key do Gemini"
+              className="input-field"
+              value={settings.geminiApiKey || ''}
+              onChange={e => setSettingsState({ ...settings, geminiApiKey: e.target.value })}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Obtenha em: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-primary-600 hover:underline">aistudio.google.com/apikey</a>
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Google Sheets */}
