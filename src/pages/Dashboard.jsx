@@ -5,6 +5,7 @@ import { Doughnut, Bar } from 'react-chartjs-2'
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js'
 import { getAssets, getPortfolioSummary, getTotalDividends, getMonthlyDividends } from '../services/dataService'
 import { fetchInsightsFromSheets, isSheetsConfigured } from '../services/sheetsService'
+import { updatePortfolioPrices, isMarketConfigured } from '../services/marketService'
 import { formatCurrency, formatPercent, getColor } from '../utils/helpers'
 import { FII_RECOMMENDATIONS, calcMonthlyIncome, calcQuotasForBudget } from '../data/fiiRecommendations'
 
@@ -57,7 +58,22 @@ export default function Dashboard() {
     setAssets(getAssets())
     setTotalDividends(getTotalDividends())
     loadLastInsights()
+    loadLivePrices()
   }, [])
+
+  async function loadLivePrices() {
+    if (!isMarketConfigured()) return
+    try {
+      const currentAssets = getAssets()
+      if (currentAssets.length === 0) return
+      const updated = await updatePortfolioPrices(currentAssets)
+      setAssets(updated)
+      // Recalcula summary com preços atualizados
+      // Nota: summary usa localStorage, mas assets locais tem precoAtual atualizado
+    } catch {
+      // Silencioso - usa preços offline
+    }
+  }
 
   async function loadLastInsights() {
     if (!isSheetsConfigured()) return

@@ -189,6 +189,23 @@ export default function Settings() {
               Obtenha em: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" className="text-primary-600 hover:underline">aistudio.google.com/apikey</a>
             </p>
           </div>
+
+          {/* Alpha Vantage */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+              Alpha Vantage API Key <span className="text-green-600">(grátis — cotações em tempo real)</span>
+            </label>
+            <input
+              type="password"
+              placeholder="Sua API Key do Alpha Vantage"
+              className="input-field"
+              value={settings.alphaVantageKey || ''}
+              onChange={e => setSettingsState({ ...settings, alphaVantageKey: e.target.value })}
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Obtenha em: <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener" className="text-primary-600 hover:underline">alphavantage.co</a> — 25 consultas/dia grátis
+            </p>
+          </div>
         </div>
       </div>
 
