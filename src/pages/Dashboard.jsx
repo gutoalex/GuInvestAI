@@ -28,7 +28,12 @@ const FII_SEGMENTS = {
 }
 
 function getFIISegment(asset) {
+  // Normaliza ticker: troca "II" no final por "11" para bater com o mapeamento
+  const normalizedTicker = asset.ticker.replace(/II$/i, '11').toUpperCase()
+  
   // Primeiro tenta o mapeamento conhecido
+  if (FII_SEGMENTS[normalizedTicker]) return FII_SEGMENTS[normalizedTicker]
+  // Tenta o ticker original também
   if (FII_SEGMENTS[asset.ticker]) return FII_SEGMENTS[asset.ticker]
   // Depois usa o campo setor se preenchido
   if (asset.setor) {
