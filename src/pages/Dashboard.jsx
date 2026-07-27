@@ -8,6 +8,7 @@ import { fetchInsightsFromSheets, isSheetsConfigured } from '../services/sheetsS
 import { updatePortfolioPrices, isMarketConfigured } from '../services/marketService'
 import { formatCurrency, formatPercent, getColor } from '../utils/helpers'
 import { FII_RECOMMENDATIONS, RECOMMENDATIONS, calcMonthlyIncome, calcQuotasForBudget } from '../data/fiiRecommendations'
+import PlanoDeVoo from '../components/PlanoDeVoo'
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -202,6 +203,9 @@ export default function Dashboard() {
           </p>
         </div>
       </div>
+
+      {/* Plano de Voo - Assessor Proativo */}
+      <PlanoDeVoo />
 
       {/* Grid com Composições */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
