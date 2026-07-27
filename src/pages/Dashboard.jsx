@@ -6,6 +6,7 @@ import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, T
 import { getAssets, getPortfolioSummary, getTotalDividends, getMonthlyDividends } from '../services/dataService'
 import { fetchInsightsFromSheets, isSheetsConfigured } from '../services/sheetsService'
 import { formatCurrency, formatPercent, getColor } from '../utils/helpers'
+import { FII_RECOMMENDATIONS, calcMonthlyIncome, calcQuotasForBudget } from '../data/fiiRecommendations'
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Tooltip, Legend)
 
@@ -329,6 +330,67 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Radar de Oportunidades */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">📡 Radar de Oportunidades</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">FIIs com bom DY para considerar</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {FII_RECOMMENDATIONS
+            .filter(r => !assets.find(a => a.ticker === r.ticker || a.ticker === r.ticker.replace('11', 'II')))
+            .sort((a, b) => b.dy - a.dy)
+            .slice(0, 6)
+            .map(fii => {
+              const cotas10 = 10
+              const renda10 = calcMonthlyIncome(fii, cotas10)
+              const cotasPra100 = Math.ceil(100 / fii.lastDiv)
+              return (
+                <div key={fii.ticker} className="bg-gray-50 dark:bg-dark-bg rounded-xl p-4 border border-gray-100 dark:border-dark-border">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="font-bold text-gray-900 dark:text-white text-sm">{fii.ticker}</span>
+                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                        fii.segmento === 'Papel' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                        fii.segmento === 'Tijolo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' :
+                        'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                      }`}>
+                        {fii.segmento}
+                      </span>
+                    </div>
+                    <span className="text-green-600 font-bold text-sm">DY {fii.dy}%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{fii.descricao}</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Cota:</span>
+                      <span className="font-medium dark:text-white">{formatCurrency(fii.preco)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Último dividendo:</span>
+                      <span className="font-medium text-green-600">{formatCurrency(fii.lastDiv)}/cota</span>
+                    </div>
+                    <div className="flex justify-between bg-green-50 dark:bg-green-900/20 rounded-lg px-2 py-1 mt-1">
+                      <span className="text-gray-600 dark:text-gray-400">{cotas10} cotas =</span>
+                      <span className="font-bold text-green-600">~{formatCurrency(renda10)}/mês</span>
+                    </div>
+                    <div className="flex justify-between text-gray-400">
+                      <span>Para R$ 100/mês:</span>
+                      <span>{cotasPra100} cotas ({formatCurrency(cotasPra100 * fii.preco)})</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          }
+        </div>
+        <p className="text-xs text-gray-400 mt-3 text-center">
+          * Valores aproximados baseados no histórico. Rentabilidade passada não garante futura.
+        </p>
       </div>
 
       {/* Gráfico Dividendos Mensais */}
