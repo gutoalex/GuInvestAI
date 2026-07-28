@@ -109,6 +109,7 @@ async function buildFullContext() {
     objetivo: profile.objetivo || 'renda passiva',
     idade: profile.idade || 'não informada',
     renda: profile.renda || 'não informada',
+    aporteMensal: parseFloat(profile.aporteMensal) || 500,
     metas: goals.map(g => ({ nome: g.nome, valor: g.valorMeta, tipo: g.tipo })),
 
     // Mercado
@@ -129,50 +130,58 @@ async function buildFullContext() {
 // =============================================
 
 function buildAdvisorPrompt(context) {
-  return `Você é o Assessor Financeiro GuInvestAI. Analise os dados abaixo e retorne um plano de ação ESTRUTURADO.
+  const aporteMax = context.aporteMensal
+
+  return `Você é o Assessor Financeiro GuInvestAI. Analise os dados e retorne um plano de ação REALISTA.
+
+⚠️ REGRA ABSOLUTA DE ORÇAMENTO: O aporte mensal do usuário é R$ ${aporteMax.toFixed(2)}. Você NUNCA deve sugerir compras que somem mais que esse valor. Calcule: quantidade × preço da cota ≤ R$ ${aporteMax.toFixed(2)}. Se uma cota custa R$ 100, o máximo são ${Math.floor(aporteMax / 100)} cotas. VALIDE ISSO.
 
 === CARTEIRA ATUAL ===
 Patrimônio: R$ ${context.patrimonio.toFixed(2)}
 Total Investido: R$ ${context.totalInvestido.toFixed(2)}
 Lucro/Prejuízo: R$ ${context.lucro.toFixed(2)} (${context.lucroPct.toFixed(2)}%)
-Total Dividendos Recebidos: R$ ${context.totalDividendos.toFixed(2)}
+Dividendos Totais Recebidos: R$ ${context.totalDividendos.toFixed(2)}
 Média Mensal Dividendos: R$ ${context.mediaMenusal.toFixed(2)}
 
-Ativos:
-${context.ativos.map(a => `- ${a.ticker} (${a.tipo}): ${a.quantidade} cotas, PM: R$${a.precoMedio.toFixed(2)}, Atual: R$${a.precoAtual.toFixed(2)}, Lucro: ${a.lucroPct}%`).join('\n')}
+Ativos (com valorização):
+${context.ativos.map(a => {
+  const lucroReais = ((a.precoAtual - a.precoMedio) * a.quantidade).toFixed(2)
+  return `- ${a.ticker} (${a.tipo}): ${a.quantidade} cotas | Comprou: R$${a.precoMedio.toFixed(2)} | Agora: R$${a.precoAtual.toFixed(2)} | Lucro: ${a.lucroPct}% (R$${lucroReais})`
+}).join('\n')}
 
-=== PERFIL DO INVESTIDOR ===
-Perfil: ${context.perfil}
-Objetivo: ${context.objetivo}
-Idade: ${context.idade}
-Renda: ${context.renda}
+=== PERFIL ===
+Perfil: ${context.perfil} | Objetivo: ${context.objetivo}
+Idade: ${context.idade} | Renda: R$ ${context.renda}
+💰 APORTE MENSAL DISPONÍVEL: R$ ${aporteMax.toFixed(2)}
 
 === METAS ===
 ${context.metas.length > 0 ? context.metas.map(m => `- ${m.nome}: R$ ${m.valor} (${m.tipo})`).join('\n') : 'Meta padrão: R$ 2.000 de renda passiva mensal'}
 
 === OPORTUNIDADES DE MERCADO ===
-${context.oportunidades.map(o => `- ${o.ticker} (${o.tipo}/${o.segmento}): R$${o.preco}, DY ${o.dy}%, Último div: R$${o.lastDiv}/cota`).join('\n')}
+${context.oportunidades.map(o => `- ${o.ticker} (${o.tipo}/${o.segmento}): Cota R$${o.preco} | DY ${o.dy}% | Div: R$${o.lastDiv}/cota/mês`).join('\n')}
 
 === INSTRUÇÕES ===
-Com base no DY atual dos ativos e no quanto falta para a meta, analise:
-1. Qual o "Aporte Inteligente" deste mês? Em quais ativos focar?
-2. Devo vender algo que ficou caro para comprar algo descontado?
-3. Neste ritmo atual de dividendos, em quantos anos atinjo a meta?
-4. Se aportar nos ativos sugeridos, em quanto tempo reduzo esse prazo?
+1. Distribua os R$ ${aporteMax.toFixed(2)} de aporte entre os melhores ativos. SOME os valores e garanta que NÃO ULTRAPASSA o aporte.
+2. Para cada sugestão de compra, explique POR QUE esse ativo (em 1 frase clara).
+3. Se algum ativo da carteira ficou caro (subiu muito), sugira venda com motivo.
+4. Calcule o tempo para atingir a meta no ritmo atual e no ritmo otimizado.
+5. Mostre a valorização de cada ativo (comprou por X, agora vale Y).
 
-RETORNE APENAS um JSON válido (sem markdown, sem crases, sem texto extra) neste formato exato:
+RETORNE APENAS JSON (sem markdown, sem crases):
 {
-  "alerta": "string - principal ponto de atenção (max 100 chars)",
+  "alerta": "string - ponto de atenção principal (max 100 chars)",
   "tempo_meta_atual": "string - ex: '15 anos neste ritmo'",
   "tempo_meta_otimizado": "string - ex: '8 anos com aportes inteligentes'",
-  "aporte_sugerido": "string - resumo do que fazer este mês (max 150 chars)",
-  "sugestao_compra": [{"ticker": "XXX", "motivo": "string curta", "quantidade_sugerida": number}],
-  "sugestao_venda": [{"ticker": "XXX", "motivo": "string curta"}],
+  "aporte_sugerido": "string - ex: 'Dividir R$ 500: R$ 200 em KNCR11 + R$ 200 em BTLG11 + R$ 100 em MXRF11'",
+  "orcamento_total": ${aporteMax.toFixed(2)},
+  "sugestao_compra": [{"ticker": "XXX", "motivo": "POR QUE comprar este (1 frase)", "quantidade_sugerida": 2, "custo_total": 200.00}],
+  "sugestao_venda": [{"ticker": "XXX", "motivo": "POR QUE vender (1 frase)"}],
+  "valorizacao_carteira": [{"ticker": "XXX", "comprou": 10.00, "agora": 11.50, "lucro_pct": 15.0, "lucro_reais": 15.00}],
   "justificativa": "string - explicação geral em 2-3 frases",
   "proximos_passos": ["passo 1", "passo 2", "passo 3"]
 }
 
-Se não houver sugestão de venda, retorne array vazio. Seja direto e prático.`
+VALIDAÇÃO FINAL: some todos os custo_total das sugestões. Se > R$ ${aporteMax.toFixed(2)}, REDUZA quantidades até caber no orçamento.`
 }
 
 // =============================================

@@ -314,6 +314,17 @@ export default function Settings() {
               placeholder="50000"
             />
           </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Aporte Mensal (R$)</label>
+            <input
+              type="number"
+              className="input-field"
+              value={profile.aporteMensal || ''}
+              onChange={e => setProfileState({ ...profile, aporteMensal: e.target.value })}
+              placeholder="500"
+            />
+            <p className="text-xs text-gray-400 mt-1">Quanto você pode investir por mês. A IA não vai sugerir acima desse valor.</p>
+          </div>
         </div>
       </div>
 

@@ -70,8 +70,28 @@ export default function Dashboard() {
       if (currentAssets.length === 0) return
       const updated = await updatePortfolioPrices(currentAssets)
       setAssets(updated)
-      // Recalcula summary com preços atualizados
-      // Nota: summary usa localStorage, mas assets locais tem precoAtual atualizado
+
+      // Recalcula summary com preços reais
+      const totalPatrimonio = updated.reduce((sum, a) => sum + (a.quantidade * (a.precoAtual || a.precoMedio)), 0)
+      const totalInvestido = updated.reduce((sum, a) => sum + (a.quantidade * a.precoMedio), 0)
+      const lucro = totalPatrimonio - totalInvestido
+      const lucroPct = totalInvestido > 0 ? (lucro / totalInvestido) * 100 : 0
+
+      const composicao = {}
+      updated.forEach(a => {
+        const tipo = a.tipo || 'Outro'
+        if (!composicao[tipo]) composicao[tipo] = 0
+        composicao[tipo] += a.quantidade * (a.precoAtual || a.precoMedio)
+      })
+
+      setSummary({
+        totalPatrimonio,
+        totalInvestido,
+        lucro,
+        lucroPct,
+        composicao,
+        totalAtivos: updated.length,
+      })
     } catch {
       // Silencioso - usa preços offline
     }

@@ -1,4 +1,5 @@
 import Sidebar from './Sidebar'
+import SyncIndicator from '../SyncIndicator'
 
 export default function Layout({ children }) {
   return (
@@ -7,6 +8,7 @@ export default function Layout({ children }) {
       <main className="md:ml-64 pb-20 md:pb-6 p-4 md:p-6">
         {children}
       </main>
+      <SyncIndicator />
     </div>
   )
 }

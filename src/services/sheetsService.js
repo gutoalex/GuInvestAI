@@ -124,3 +124,66 @@ export function isSheetsConfigured() {
   const settings = getSettings()
   return !!settings.sheetsUrl
 }
+
+// =============================================
+// AUTO-SYNC (salva automaticamente na nuvem)
+// =============================================
+
+let syncTimeout = null
+let syncListeners = []
+
+// Registra listener para status de sync (loading/success/error)
+export function onSyncStatus(callback) {
+  syncListeners.push(callback)
+  return () => { syncListeners = syncListeners.filter(l => l !== callback) }
+}
+
+function notifySyncStatus(status) {
+  syncListeners.forEach(cb => cb(status))
+}
+
+// Debounced auto-sync: espera 3s após última alteração para sincronizar
+export function triggerAutoSync() {
+  if (!isSheetsConfigured()) return
+
+  if (syncTimeout) clearTimeout(syncTimeout)
+  syncTimeout = setTimeout(() => {
+    syncWithCloud()
+  }, 3000)
+}
+
+// Sync completo com feedback visual
+export async function syncWithCloud() {
+  if (!isSheetsConfigured()) {
+    notifySyncStatus({ status: 'error', message: 'Google Sheets não configurado' })
+    return { success: false }
+  }
+
+  notifySyncStatus({ status: 'syncing' })
+
+  try {
+    // Importa dados locais dinamicamente para evitar circular dependency
+    const { getAssets, getTransactions, getDividends, getProfile, getGoals } = await import('./dataService')
+
+    const data = {
+      assets: getAssets(),
+      transactions: getTransactions(),
+      dividends: getDividends(),
+      profile: getProfile(),
+      goals: getGoals(),
+    }
+
+    const result = await syncAllToSheets(data)
+
+    if (result.success) {
+      notifySyncStatus({ status: 'success', message: 'Sincronizado!' })
+      return { success: true }
+    } else {
+      notifySyncStatus({ status: 'error', message: result.error || 'Erro desconhecido' })
+      return { success: false, error: result.error }
+    }
+  } catch (err) {
+    notifySyncStatus({ status: 'error', message: err.message })
+    return { success: false, error: err.message }
+  }
+}

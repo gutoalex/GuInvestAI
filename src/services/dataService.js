@@ -19,6 +19,10 @@ function getFromStorage(key) {
 
 function saveToStorage(key, data) {
   localStorage.setItem(key, JSON.stringify(data))
+  // Trigger auto-sync com Google Sheets (debounced)
+  try {
+    import('./sheetsService').then(mod => mod.triggerAutoSync())
+  } catch { /* silencioso */ }
 }
 
 // === Assets ===
@@ -162,6 +166,7 @@ export function getProfile() {
     idade: '',
     renda: '',
     valorInvestido: '',
+    aporteMensal: '500',
     perfil: 'moderado',
   }
 }
